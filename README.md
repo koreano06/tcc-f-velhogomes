@@ -1,4 +1,3 @@
-# tcc-f-velhogomes
 # tcc-f-velhogomes — Backend
 
 API REST backend do sistema de gerenciamento de materiais recicláveis desenvolvido como trabalho da faculdade (PUC/GO).
