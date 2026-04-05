@@ -21,18 +21,18 @@ Sistema backend para controle e listagem de materiais recicláveis de um ferro-v
 ---
 
 ## 📁 Estrutura do projeto
+```
 tcc-f-velhogomes/
 ├── src/
 │   ├── controllers/
-│   │   └── materialController.js  # Lógica de negócio dos materiais
+│   │   └── materialController.js
 │   ├── database/
-│   │   └── db.js                  # Configuração da conexão com PostgreSQL
-│   ├── routes.js                  # Definição das rotas da API
-│   └── server.js                  # Inicialização do servidor
+│   │   └── db.js
+│   ├── routes.js
+│   └── server.js
 ├── package.json
 └── .gitignore
-
----
+```
 
 ## 🚀 Como rodar localmente
 
