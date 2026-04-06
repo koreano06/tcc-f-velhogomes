@@ -1,15 +1,8 @@
-const express = require('express');
-const cors = require('cors');
+require("dotenv").config();
+const app = require("./app");
 
-require('./database/db'); // força conexão com o banco
+const PORT = Number(process.env.PORT || 3000);
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const routes = require('./routes');
-app.use('/api', routes);
-
-app.listen(3000, () => {
-  console.log('Servidor rodando em http://localhost:3000');
+app.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
