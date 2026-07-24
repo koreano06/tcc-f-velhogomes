@@ -5,17 +5,22 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+<<<<<<< HEAD
     "dev": "node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js"
+=======
+    "dev": "node src/server.js"
+>>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+<<<<<<< HEAD
     "@prisma/client": "^6.13.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -25,5 +30,11 @@
   },
   "devDependencies": {
     "prisma": "^6.13.0"
+=======
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "pg": "^8.19.0"
+>>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d
   }
 }
