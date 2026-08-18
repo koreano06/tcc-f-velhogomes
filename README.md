@@ -1,21 +1,30 @@
-<<<<<<< HEAD
-# Ferro Velho Gomes — Backend Oficial
-
-API REST do sistema de gerenciamento do Ferro Velho Gomes.
-
-Este diretório agora é o **único backend oficial** do projeto. A pasta `backend-final` foi incorporada ao backend principal para evitar dois servidores e dois modelos de banco concorrendo.
-
-## Stack
-
-- Node.js
-- Express
-- PostgreSQL
-- Prisma ORM
-- JWT para sessão
-- bcryptjs para hash de PIN/senha
-
-## Estrutura
-
+# Ferro Velho Gomes — Backend
+ 
+API REST do sistema de gerenciamento de materiais recicláveis do Ferro Velho Gomes, desenvolvido como trabalho de conclusão de curso (PUC/GO).
+ 
+Este diretório é o **único backend oficial** do projeto. Versões anteriores e experimentais foram incorporadas a este backend para evitar múltiplos servidores e modelos de banco concorrendo entre si.
+ 
+---
+ 
+## 📋 Sobre o projeto
+ 
+Sistema backend para controle e listagem de materiais recicláveis de um ferro-velho. A API fornece os dados para o frontend consumir, conectando-se a um banco de dados PostgreSQL e expondo endpoints via HTTP.
+ 
+---
+ 
+## 🛠️ Tecnologias utilizadas
+ 
+- **Node.js** — ambiente de execução JavaScript
+- **Express** — framework web para criação da API REST
+- **PostgreSQL** — banco de dados relacional
+- **Prisma ORM** — modelagem e acesso ao banco de dados
+- **JWT** — autenticação e gerenciamento de sessão
+- **bcryptjs** — hash de PIN/senha
+- **CORS** — habilitação de requisições cross-origin para o frontend
+---
+ 
+## 📁 Estrutura do projeto
+ 
 ```txt
 src/
   controllers/     Regras HTTP de cada módulo
@@ -28,149 +37,92 @@ prisma/
   schema.prisma    Modelo oficial do banco
   seed.js          Usuários iniciais
 ```
-
-## Configuração
-
-1. Copie `.env.example` para `.env`.
-2. Ajuste `DATABASE_URL` e `JWT_SECRET`.
-3. Instale dependências:
-
-=======
-# tcc-f-velhogomes — Backend
-
-API REST backend do sistema de gerenciamento de materiais recicláveis desenvolvido como trabalho da faculdade (PUC/GO).
-
+ 
 ---
-
-## 📋 Sobre o projeto
-
-Sistema backend para controle e listagem de materiais recicláveis de um ferro-velho. A API fornece os dados para o frontend consumir, conectando-se a um banco de dados PostgreSQL e expondo endpoints via HTTP.
-
----
-
-## 🛠️ Tecnologias utilizadas
-
-- **Node.js** — ambiente de execução JavaScript
-- **Express 5** — framework web para criação da API REST
-- **PostgreSQL** — banco de dados relacional
-- **pg** — driver Node.js para conexão com PostgreSQL
-- **CORS** — habilitação de requisições cross-origin para o frontend
-
----
-
-## 📁 Estrutura do projeto
-```
-tcc-f-velhogomes/
-├── src/
-│   ├── controllers/
-│   │   └── materialController.js
-│   ├── database/
-│   │   └── db.js
-│   ├── routes.js
-│   └── server.js
-├── package.json
-└── .gitignore
-```
-
+ 
 ## 🚀 Como rodar localmente
-
+ 
 ### Pré-requisitos
-
+ 
 - [Node.js](https://nodejs.org/) instalado
 - [PostgreSQL](https://www.postgresql.org/) instalado e rodando
-
 ### Passo a passo
-
+ 
 **1. Clone o repositório**
+ 
 ```bash
 git clone https://github.com/koreano06/tcc-f-velhogomes.git
 cd tcc-f-velhogomes
 ```
-
+ 
 **2. Instale as dependências**
->>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d
+ 
 ```bash
 npm install
 ```
-
-<<<<<<< HEAD
-4. Crie as tabelas com Prisma:
-
+ 
+**3. Configure as variáveis de ambiente**
+ 
+Copie o arquivo de exemplo e preencha com os seus próprios dados (nunca versione o `.env` real):
+ 
+```bash
+cp .env.example .env
+```
+ 
+No `.env`, ajuste pelo menos:
+ 
+- `DATABASE_URL` — string de conexão com o seu banco PostgreSQL local
+- `JWT_SECRET` — uma chave secreta própria para assinatura dos tokens
+**4. Crie as tabelas com Prisma**
+ 
 ```bash
 npm run prisma:migrate
 ```
-
-5. Crie os usuários iniciais:
-
+ 
+**5. Crie os usuários iniciais**
+ 
 ```bash
 npm run seed
 ```
-
-6. Rode a API:
-
+ 
+**6. Rode a API**
+ 
 ```bash
 npm run dev
 ```
-
+ 
 A API sobe em `http://localhost:3000/api`.
-
-## Usuários Iniciais
-
-O seed cria os usuários `gomes`, `joao` e `consulta`. Os PINs ficam salvos no banco com hash, não em texto puro.
-
-## Rotas Principais
-
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `GET /api/materiais`
-- `POST /api/materiais`
-- `PUT /api/materiais/:id`
-- `DELETE /api/materiais/:id`
-- `GET /api/estoque`
-- `POST /api/purchases`
-- `POST /api/sales`
-- `GET /api/reports/financial`
-- `GET /api/reports/profit-by-material`
-- `GET /api/management/overview`
-- `GET /api/management/finance`
-- `GET /api/management/partners`
-- `GET /api/management/audit`
-
-=======
-**3. Configure o banco de dados**
-
-Crie um banco chamado `f_velhogomes` no PostgreSQL e ajuste as credenciais em `src/database/db.js`:
-```js
-const pool = new Pool({
-  host: 'localhost',
-  user: 'seu_usuario',
-  password: 'sua_senha',
-  database: 'f_velhogomes',
-  port: 5432,
-});
-```
-
-**4. Inicie o servidor**
-```bash
-node src/server.js
-```
-
-O servidor vai rodar em `http://localhost:3000`
-
+ 
 ---
-
-## 🔌 Endpoints disponíveis
-
+ 
+## 👤 Usuários iniciais
+ 
+O seed cria os usuários padrão do sistema (`gomes`, `joao` e `consulta`). Os PINs ficam salvos no banco com hash, nunca em texto puro.
+ 
+---
+ 
+## 🔌 Rotas principais
+ 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/` | Verifica se a API está funcionando |
-| GET | `/api/materiais` | Lista todos os materiais cadastrados |
-
+| POST | `/api/auth/login` | Autenticação de usuário |
+| GET | `/api/auth/me` | Dados do usuário autenticado |
+| GET | `/api/materiais` | Lista os materiais cadastrados |
+| POST | `/api/materiais` | Cadastra um novo material |
+| PUT | `/api/materiais/:id` | Atualiza um material existente |
+| DELETE | `/api/materiais/:id` | Remove um material |
+| GET | `/api/estoque` | Consulta o estoque atual |
+| POST | `/api/purchases` | Registra uma compra |
+| POST | `/api/sales` | Registra uma venda |
+| GET | `/api/reports/financial` | Relatório financeiro |
+| GET | `/api/reports/profit-by-material` | Relatório de lucro por material |
+| GET | `/api/management/overview` | Visão geral de gestão |
+| GET | `/api/management/finance` | Gestão financeira |
+| GET | `/api/management/partners` | Gestão de sócios/parceiros |
+| GET | `/api/management/audit` | Auditoria de ações no sistema |
+ 
 ---
-
+ 
 ## 👨‍💻 Autor
-
-**Gustavo Ramos** — [@koreano06](https://github.com/koreano06)
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/gustavo-ramos-843543397)
->>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d
+ 
+Desenvolvido como trabalho de conclusão de curso (TCC) — PUC/GO.
