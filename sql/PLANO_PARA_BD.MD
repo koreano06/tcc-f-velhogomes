@@ -24,7 +24,7 @@ fornecedores, usuários e auditoria.
 ## Stack tecnológica
 
 | Tecnologia | Papel |
-|---|---|
+|---|--- |
 | **PostgreSQL 16** | SGBD relacional — motor do banco |
 | **PL/pgSQL** | Linguagem procedural nativa, usada em triggers, procedures e functions |
 | **pgcrypto** (extensão) | Hash de senha (bcrypt) direto no banco |

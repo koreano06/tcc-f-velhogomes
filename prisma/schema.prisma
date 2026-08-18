@@ -7,82 +7,202 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  owner
-  employee
-  viewer
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model auditoria {
+  id_auditoria  BigInt   @id @default(autoincrement())
+  tabela        String   @db.VarChar(50)
+  operacao      String   @db.VarChar(10)
+  id_registro   Int?
+  dados_antigos Json?
+  dados_novos   Json?
+  id_usuario    Int?
+  data_hora     DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([tabela, id_registro], map: "idx_auditoria_tabela_reg")
 }
 
-model User {
-  id           Int        @id @default(autoincrement())
-  username     String     @unique
-  name         String
-  role         UserRole   @default(viewer)
-  passwordHash String     @map("password_hash")
-  active       Boolean    @default(true)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  audits       AuditLog[]
-
-  @@map("users")
+model categorias {
+  id_categoria Int         @id @default(autoincrement())
+  nome         String      @unique(map: "uq_categorias_nome") @db.VarChar(80)
+  descricao    String?     @db.VarChar(255)
+  materiais    materiais[]
 }
 
-model Material {
-  id              Int       @id @default(autoincrement())
-  nome            String
-  precoCompraKg   Decimal   @default(0) @map("preco_compra_kg") @db.Decimal(10, 2)
-  precoVendaKg    Decimal   @default(0) @map("preco_venda_kg") @db.Decimal(10, 2)
-  estoqueMinimoKg Decimal   @default(0) @map("estoque_minimo_kg") @db.Decimal(10, 3)
-  active          Boolean   @default(true)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  stock           Stock?
-  purchases       Purchase[]
-  sales           Sale[]
+model clientes {
+  id_cliente Int      @id @default(autoincrement())
+  nome       String   @db.VarChar(150)
+  documento  String?  @unique(map: "uq_clientes_documento") @db.VarChar(20)
+  telefone   String?  @db.VarChar(20)
+  email      String?  @db.VarChar(150)
+  endereco   String?  @db.VarChar(255)
+  ativo      Boolean  @default(true)
+  criado_em  DateTime @default(now()) @db.Timestamp(6)
+  vendas     vendas[]
 
-  @@map("materials")
+  @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_clientes_nome_trgm", type: Gin)
 }
 
-model Stock {
-  materialId Int      @id @map("material_id")
-  quantityKg Decimal  @default(0) @map("quantity_kg") @db.Decimal(12, 3)
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  material   Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model compras {
+  id_compra     Int            @id @default(autoincrement())
+  id_fornecedor Int
+  id_usuario    Int
+  data_compra   DateTime       @default(now()) @db.Timestamp(6)
+  valor_total   Decimal        @default(0) @db.Decimal(12, 2)
+  status        String         @default("CONCLUIDA") @db.VarChar(20)
+  criado_em     DateTime       @default(now()) @db.Timestamp(6)
+  fornecedores  fornecedores   @relation(fields: [id_fornecedor], references: [id_fornecedor], map: "fk_compras_fornecedor")
+  usuarios      usuarios       @relation(fields: [id_usuario], references: [id_usuario], map: "fk_compras_usuario")
+  itens_compra  itens_compra[]
 
-  @@map("stocks")
+  @@index([data_compra], map: "idx_compras_data")
+  @@index([id_fornecedor], map: "idx_compras_fornecedor")
+  @@index([id_usuario], map: "idx_compras_usuario")
 }
 
-model Purchase {
-  id         Int      @id @default(autoincrement())
-  materialId Int     @map("material_id")
-  weightKg   Decimal @map("weight_kg") @db.Decimal(12, 3)
-  pricePerKg Decimal @map("price_per_kg") @db.Decimal(10, 2)
-  total      Decimal @db.Decimal(12, 2)
-  createdAt  DateTime @default(now()) @map("created_at")
-  material   Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
-
-  @@map("purchases")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model estoque {
+  id_estoque    Int       @id @default(autoincrement())
+  id_material   Int       @unique(map: "uq_estoque_material")
+  quantidade_kg Decimal   @default(0) @db.Decimal(12, 2)
+  atualizado_em DateTime  @default(now()) @db.Timestamp(6)
+  materiais     materiais @relation(fields: [id_material], references: [id_material], onDelete: Cascade, map: "fk_estoque_material")
 }
 
-model Sale {
-  id         Int      @id @default(autoincrement())
-  materialId Int     @map("material_id")
-  weightKg   Decimal @map("weight_kg") @db.Decimal(12, 3)
-  pricePerKg Decimal @map("price_per_kg") @db.Decimal(10, 2)
-  total      Decimal @db.Decimal(12, 2)
-  createdAt  DateTime @default(now()) @map("created_at")
-  material   Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+model fornecedores {
+  id_fornecedor Int       @id @default(autoincrement())
+  nome          String    @db.VarChar(150)
+  documento     String?   @unique(map: "uq_fornecedores_documento") @db.VarChar(20)
+  telefone      String?   @db.VarChar(20)
+  email         String?   @db.VarChar(150)
+  endereco      String?   @db.VarChar(255)
+  ativo         Boolean   @default(true)
+  criado_em     DateTime  @default(now()) @db.Timestamp(6)
+  compras       compras[]
 
-  @@map("sales")
+  @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_fornecedores_nome_trgm", type: Gin)
 }
 
-model AuditLog {
-  id          Int      @id @default(autoincrement())
-  action      String
-  description String?
-  userId      Int?     @map("user_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model itens_compra {
+  id_item_compra Int       @id @default(autoincrement())
+  id_compra      Int
+  id_material    Int
+  peso_kg        Decimal   @db.Decimal(10, 2)
+  preco_kg       Decimal   @db.Decimal(10, 2)
+  subtotal       Decimal?  @default(dbgenerated("(peso_kg * preco_kg)")) @db.Decimal(12, 2)
+  compras        compras   @relation(fields: [id_compra], references: [id_compra], onDelete: Cascade, map: "fk_itens_compra_compra")
+  materiais      materiais @relation(fields: [id_material], references: [id_material], map: "fk_itens_compra_material")
 
-  @@map("audit_logs")
+  @@index([id_compra], map: "idx_itens_compra_compra")
+  @@index([id_material], map: "idx_itens_compra_material")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model itens_venda {
+  id_item_venda Int       @id @default(autoincrement())
+  id_venda      Int
+  id_material   Int
+  peso_kg       Decimal   @db.Decimal(10, 2)
+  preco_kg      Decimal   @db.Decimal(10, 2)
+  subtotal      Decimal?  @default(dbgenerated("(peso_kg * preco_kg)")) @db.Decimal(12, 2)
+  materiais     materiais @relation(fields: [id_material], references: [id_material], map: "fk_itens_venda_material")
+  vendas        vendas    @relation(fields: [id_venda], references: [id_venda], onDelete: Cascade, map: "fk_itens_venda_venda")
+
+  @@index([id_material], map: "idx_itens_venda_material")
+  @@index([id_venda], map: "idx_itens_venda_venda")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model logs {
+  id_log    BigInt   @id @default(autoincrement())
+  nivel     String   @db.VarChar(10)
+  mensagem  String
+  contexto  Json?
+  criado_em DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([nivel, criado_em], map: "idx_logs_nivel_data")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model materiais {
+  id_material           Int                     @id @default(autoincrement())
+  nome                  String                  @unique(map: "uq_materiais_nome") @db.VarChar(120)
+  id_categoria          Int?
+  unidade_medida        String                  @default("kg") @db.VarChar(10)
+  preco_compra_kg       Decimal                 @db.Decimal(10, 2)
+  preco_venda_kg        Decimal                 @db.Decimal(10, 2)
+  estoque_minimo_kg     Decimal                 @default(0) @db.Decimal(12, 2)
+  ativo                 Boolean                 @default(true)
+  criado_em             DateTime                @default(now()) @db.Timestamp(6)
+  estoque               estoque?
+  itens_compra          itens_compra[]
+  itens_venda           itens_venda[]
+  categorias            categorias?             @relation(fields: [id_categoria], references: [id_categoria], map: "fk_materiais_categoria")
+  movimentacoes_estoque movimentacoes_estoque[]
+
+  @@index([id_categoria], map: "idx_materiais_categoria")
+  @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_materiais_nome_trgm", type: Gin)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model movimentacoes_estoque {
+  id_movimentacao   Int       @id @default(autoincrement())
+  id_material       Int
+  tipo              String    @db.VarChar(10)
+  quantidade_kg     Decimal   @db.Decimal(12, 2)
+  origem            String    @db.VarChar(20)
+  id_referencia     Int?
+  id_usuario        Int?
+  data_movimentacao DateTime  @default(now()) @db.Timestamp(6)
+  observacao        String?   @db.VarChar(255)
+  materiais         materiais @relation(fields: [id_material], references: [id_material], map: "fk_mov_material")
+  usuarios          usuarios? @relation(fields: [id_usuario], references: [id_usuario], map: "fk_mov_usuario")
+
+  @@index([data_movimentacao], map: "idx_mov_data")
+  @@index([id_material], map: "idx_mov_material")
+}
+
+model perfis {
+  id_perfil Int        @id @default(autoincrement())
+  nome      String     @unique(map: "uq_perfis_nome") @db.VarChar(50)
+  descricao String?    @db.VarChar(255)
+  criado_em DateTime   @default(now()) @db.Timestamp(6)
+  usuarios  usuarios[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuarios {
+  id_usuario            Int                     @id @default(autoincrement())
+  nome                  String                  @db.VarChar(150)
+  email                 String                  @unique(map: "uq_usuarios_email") @db.VarChar(150)
+  senha_hash            String                  @db.VarChar(255)
+  id_perfil             Int
+  ativo                 Boolean                 @default(true)
+  criado_em             DateTime                @default(now()) @db.Timestamp(6)
+  atualizado_em         DateTime                @default(now()) @db.Timestamp(6)
+  compras               compras[]
+  movimentacoes_estoque movimentacoes_estoque[]
+  perfis                perfis                  @relation(fields: [id_perfil], references: [id_perfil], map: "fk_usuarios_perfil")
+  vendas                vendas[]
+
+  @@index([id_perfil], map: "idx_usuarios_perfil")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vendas {
+  id_venda    Int           @id @default(autoincrement())
+  id_cliente  Int
+  id_usuario  Int
+  data_venda  DateTime      @default(now()) @db.Timestamp(6)
+  valor_total Decimal       @default(0) @db.Decimal(12, 2)
+  status      String        @default("CONCLUIDA") @db.VarChar(20)
+  criado_em   DateTime      @default(now()) @db.Timestamp(6)
+  itens_venda itens_venda[]
+  clientes    clientes      @relation(fields: [id_cliente], references: [id_cliente], map: "fk_vendas_cliente")
+  usuarios    usuarios      @relation(fields: [id_usuario], references: [id_usuario], map: "fk_vendas_usuario")
+
+  @@index([id_cliente], map: "idx_vendas_cliente")
+  @@index([data_venda], map: "idx_vendas_data")
+  @@index([id_usuario], map: "idx_vendas_usuario")
+}

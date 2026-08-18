@@ -4,29 +4,46 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const initialUsers = [
-  { username: "gomes", pin: "1234", role: "owner", name: "Gomes" },
-  { username: "joao", pin: "2222", role: "employee", name: "Joao" },
-  { username: "consulta", pin: "0000", role: "viewer", name: "Consulta" },
+const profiles = [
+  { nome: "ADMIN", descricao: "Acesso completo ao sistema" },
+  { nome: "OPERADOR", descricao: "Registra compras, vendas e consulta estoque" },
+  { nome: "LEITURA", descricao: "Consulta dados operacionais sem alterar" },
+];
+
+const users = [
+  { nome: "gomes", email: "gomes@sistema.local", pin: "1234", perfil: "ADMIN" },
+  { nome: "joao", email: "joao@sistema.local", pin: "2222", perfil: "OPERADOR" },
+  { nome: "consulta", email: "consulta@sistema.local", pin: "0000", perfil: "LEITURA" },
 ];
 
 async function main() {
-  for (const user of initialUsers) {
-    const passwordHash = await bcrypt.hash(user.pin, 10);
+  for (const profile of profiles) {
+    await prisma.perfis.upsert({
+      where: { nome: profile.nome },
+      update: { descricao: profile.descricao },
+      create: profile,
+    });
+  }
 
-    await prisma.user.upsert({
-      where: { username: user.username },
+  const profileRows = await prisma.perfis.findMany();
+  const profileIds = new Map(profileRows.map((profile) => [profile.nome, profile.id_perfil]));
+
+  for (const user of users) {
+    const senhaHash = await bcrypt.hash(user.pin, 10);
+
+    await prisma.usuarios.upsert({
+      where: { email: user.email },
       update: {
-        name: user.name,
-        role: user.role,
-        passwordHash,
-        active: true,
+        nome: user.nome,
+        senha_hash: senhaHash,
+        id_perfil: profileIds.get(user.perfil),
+        ativo: true,
       },
       create: {
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        passwordHash,
+        nome: user.nome,
+        email: user.email,
+        senha_hash: senhaHash,
+        id_perfil: profileIds.get(user.perfil),
       },
     });
   }
@@ -35,11 +52,10 @@ async function main() {
 main()
   .then(async () => {
     await prisma.$disconnect();
-    console.log("Usuarios iniciais criados/atualizados com seguranca.");
+    console.log("Perfis e usuarios iniciais criados/atualizados.");
   })
   .catch(async (error) => {
     console.error(error);
     await prisma.$disconnect();
     process.exit(1);
   });
-

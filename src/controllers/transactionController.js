@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const prisma = require("../lib/prisma");
 const { toMoney, toNumber, toWeight } = require("../lib/number");
 
@@ -6,94 +5,65 @@ function validateTransactionPayload({ materialId, weightKg, pricePerKg }) {
   if (!materialId || weightKg == null || pricePerKg == null) {
     return "Campos materialId, weightKg e pricePerKg sao obrigatorios.";
   }
-
   if (toNumber(weightKg) <= 0 || toNumber(pricePerKg) < 0) {
     return "Peso deve ser maior que zero e preco nao pode ser negativo.";
   }
-
   return null;
-=======
-const pool = require("../database/db");
+}
 
-async function registrarVenda(req, res) {
-  const { materialId, weightKg, pricePerKg } = req.body;
+async function getOrCreateDefaultFornecedor(tx) {
+  const fornecedor = await tx.fornecedores.findFirst({ where: { ativo: true }, orderBy: { id_fornecedor: "asc" } });
+  if (fornecedor) return fornecedor;
+  return tx.fornecedores.create({ data: { nome: "Fornecedor Padrao" } });
+}
 
-  if (!materialId || !weightKg || !pricePerKg) {
-    return res.status(400).json({ error: "Campos materialId, weightKg e pricePerKg sao obrigatorios." });
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const valorTotal = Number(weightKg) * Number(pricePerKg);
-    const vendaResult = await client.query(
-      `INSERT INTO venda (data, valor_total, id_cliente, id_usuario)
-       VALUES (CURRENT_TIMESTAMP, $1, 1, 1)
-       RETURNING id_venda`,
-      [valorTotal]
-    );
-
-    const idVenda = vendaResult.rows[0].id_venda;
-    await client.query(
-      `INSERT INTO item_venda (id_venda, id_material, preco_kg, peso, subtotal)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [idVenda, materialId, pricePerKg, weightKg, valorTotal]
-    );
-
-    await client.query("COMMIT");
-    res.status(201).json({ message: "Venda registrada com sucesso!", id_venda: idVenda });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
->>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d
+async function getOrCreateDefaultCliente(tx) {
+  const cliente = await tx.clientes.findFirst({ where: { ativo: true }, orderBy: { id_cliente: "asc" } });
+  if (cliente) return cliente;
+  return tx.clientes.create({ data: { nome: "Consumidor Final" } });
 }
 
 async function registrarCompra(req, res) {
   const { materialId, weightKg, pricePerKg } = req.body;
-<<<<<<< HEAD
   const validationError = validateTransactionPayload({ materialId, weightKg, pricePerKg });
-
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
+  if (validationError) return res.status(400).json({ error: validationError });
 
   const weight = toWeight(weightKg);
   const price = toMoney(pricePerKg);
   const total = toMoney(weight * price);
+  const idMaterial = Number(materialId);
 
   const compra = await prisma.$transaction(async (tx) => {
-    const material = await tx.material.findFirst({
-      where: { id: Number(materialId), active: true },
-    });
+    const material = await tx.materiais.findFirst({ where: { id_material: idMaterial, ativo: true } });
+    if (!material) throw Object.assign(new Error("Material nao encontrado ou inativo."), { status: 404 });
 
-    if (!material) {
-      throw Object.assign(new Error("Material nao encontrado ou inativo."), { status: 404 });
-    }
-
-    const created = await tx.purchase.create({
+    const fornecedor = await getOrCreateDefaultFornecedor(tx);
+    const created = await tx.compras.create({
       data: {
-        materialId: Number(materialId),
-        weightKg: weight,
-        pricePerKg: price,
-        total,
+        id_fornecedor: fornecedor.id_fornecedor,
+        id_usuario: req.user.id,
+        valor_total: total,
+        itens_compra: {
+          create: { id_material: idMaterial, peso_kg: weight, preco_kg: price },
+        },
       },
+      include: { itens_compra: true },
     });
 
-    await tx.stock.upsert({
-      where: { materialId: Number(materialId) },
-      update: { quantityKg: { increment: weight } },
-      create: { materialId: Number(materialId), quantityKg: weight },
+    await tx.estoque.upsert({
+      where: { id_material: idMaterial },
+      update: { quantidade_kg: { increment: weight } },
+      create: { id_material: idMaterial, quantidade_kg: weight },
     });
 
-    await tx.auditLog.create({
+    await tx.movimentacoes_estoque.create({
       data: {
-        action: "Compra registrada",
-        description: `${material.nome}: entrada de ${weight} kg a R$ ${price}/kg.`,
-        userId: req.user.id,
+        id_material: idMaterial,
+        tipo: "ENTRADA",
+        quantidade_kg: weight,
+        origem: "COMPRA",
+        id_referencia: created.id_compra,
+        id_usuario: req.user.id,
       },
     });
 
@@ -101,64 +71,63 @@ async function registrarCompra(req, res) {
   });
 
   res.status(201).json({
-    id: compra.id,
-    materialId: compra.materialId,
-    weightKg: toNumber(compra.weightKg),
-    pricePerKg: toNumber(compra.pricePerKg),
-    totalCost: toNumber(compra.total),
-    createdAt: compra.createdAt,
+    id: compra.id_compra,
+    materialId: idMaterial,
+    weightKg: weight,
+    pricePerKg: price,
+    totalCost: total,
+    createdAt: compra.criado_em,
   });
 }
 
 async function registrarVenda(req, res) {
   const { materialId, weightKg, pricePerKg } = req.body;
   const validationError = validateTransactionPayload({ materialId, weightKg, pricePerKg });
-
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
+  if (validationError) return res.status(400).json({ error: validationError });
 
   const weight = toWeight(weightKg);
   const price = toMoney(pricePerKg);
   const total = toMoney(weight * price);
+  const idMaterial = Number(materialId);
 
   const venda = await prisma.$transaction(async (tx) => {
-    const material = await tx.material.findFirst({
-      where: { id: Number(materialId), active: true },
-      include: { stock: true },
+    const material = await tx.materiais.findFirst({
+      where: { id_material: idMaterial, ativo: true },
+      include: { estoque: true },
     });
+    if (!material) throw Object.assign(new Error("Material nao encontrado ou inativo."), { status: 404 });
 
-    if (!material) {
-      throw Object.assign(new Error("Material nao encontrado ou inativo."), { status: 404 });
-    }
-
-    const saldoAtual = toNumber(material.stock?.quantityKg);
+    const saldoAtual = toNumber(material.estoque?.quantidade_kg);
     if (saldoAtual < weight) {
-      throw Object.assign(
-        new Error(`Saldo insuficiente em estoque. Disponivel: ${saldoAtual.toFixed(3)} kg.`),
-        { status: 400 }
-      );
+      throw Object.assign(new Error(`Saldo insuficiente. Disponivel: ${saldoAtual.toFixed(2)} kg.`), { status: 400 });
     }
 
-    const created = await tx.sale.create({
+    const cliente = await getOrCreateDefaultCliente(tx);
+    const created = await tx.vendas.create({
       data: {
-        materialId: Number(materialId),
-        weightKg: weight,
-        pricePerKg: price,
-        total,
+        id_cliente: cliente.id_cliente,
+        id_usuario: req.user.id,
+        valor_total: total,
+        itens_venda: {
+          create: { id_material: idMaterial, peso_kg: weight, preco_kg: price },
+        },
       },
+      include: { itens_venda: true },
     });
 
-    await tx.stock.update({
-      where: { materialId: Number(materialId) },
-      data: { quantityKg: { decrement: weight } },
+    await tx.estoque.update({
+      where: { id_material: idMaterial },
+      data: { quantidade_kg: { decrement: weight } },
     });
 
-    await tx.auditLog.create({
+    await tx.movimentacoes_estoque.create({
       data: {
-        action: "Venda registrada",
-        description: `${material.nome}: saida de ${weight} kg a R$ ${price}/kg.`,
-        userId: req.user.id,
+        id_material: idMaterial,
+        tipo: "SAIDA",
+        quantidade_kg: weight,
+        origem: "VENDA",
+        id_referencia: created.id_venda,
+        id_usuario: req.user.id,
       },
     });
 
@@ -166,51 +135,13 @@ async function registrarVenda(req, res) {
   });
 
   res.status(201).json({
-    id: venda.id,
-    materialId: venda.materialId,
-    weightKg: toNumber(venda.weightKg),
-    pricePerKg: toNumber(venda.pricePerKg),
-    totalRevenue: toNumber(venda.total),
-    createdAt: venda.createdAt,
+    id: venda.id_venda,
+    materialId: idMaterial,
+    weightKg: weight,
+    pricePerKg: price,
+    totalRevenue: total,
+    createdAt: venda.criado_em,
   });
 }
 
 module.exports = { registrarVenda, registrarCompra };
-
-=======
-
-  if (!materialId || !weightKg || !pricePerKg) {
-    return res.status(400).json({ error: "Campos materialId, weightKg e pricePerKg sao obrigatorios." });
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const valorTotal = Number(weightKg) * Number(pricePerKg);
-    const compraResult = await client.query(
-      `INSERT INTO compra (data, valor_total, id_usuario, id_fornecedor)
-       VALUES (CURRENT_TIMESTAMP, $1, 1, 1)
-       RETURNING id_compra`,
-      [valorTotal]
-    );
-
-    const idCompra = compraResult.rows[0].id_compra;
-    await client.query(
-      `INSERT INTO item_compra (id_compra, id_material, preco_kg, peso, subtotal)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [idCompra, materialId, pricePerKg, weightKg, valorTotal]
-    );
-
-    await client.query("COMMIT");
-    res.status(201).json({ message: "Compra registrada com sucesso!", id_compra: idCompra });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-module.exports = { registrarVenda, registrarCompra };
->>>>>>> 9bd93b89a5a1c31e2b7bfb0c84358369ca6f1f7d

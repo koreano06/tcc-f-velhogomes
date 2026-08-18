@@ -1,25 +1,31 @@
 const { toNumber } = require("./number");
 
 function mapMaterial(material) {
-  const stock = material.stock || {};
+  const stock = material.estoque || {};
 
   return {
-    id: material.id,
+    id: material.id_material,
     nome: material.nome,
-    preco_compra_kg: toNumber(material.precoCompraKg),
-    preco_venda_kg: toNumber(material.precoVendaKg),
-    estoque_minimo_kg: toNumber(material.estoqueMinimoKg),
-    quantidade_kg: toNumber(stock.quantityKg),
-    ativo: material.active,
+    preco_compra_kg: toNumber(material.preco_compra_kg),
+    preco_venda_kg: toNumber(material.preco_venda_kg),
+    estoque_minimo_kg: toNumber(material.estoque_minimo_kg),
+    quantidade_kg: toNumber(stock.quantidade_kg),
+    ativo: material.ativo,
   };
 }
 
 function mapUser(user) {
+  const roleByProfile = {
+    ADMIN: "owner",
+    OPERADOR: "employee",
+    LEITURA: "viewer",
+  };
+
   return {
-    id: user.id,
-    username: user.username,
-    name: user.name,
-    role: user.role,
+    id: user.id_usuario,
+    username: user.email,
+    name: user.nome,
+    role: roleByProfile[user.perfis?.nome] || "viewer",
   };
 }
 
