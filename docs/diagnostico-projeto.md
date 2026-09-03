@@ -2,12 +2,7 @@
 
 ## 1. Backend único
 
-Antes havia dois backends no projeto:
-
-- `src/`
-- `backend-final/src/`
-
-Isso criava risco de manutenção porque cada pasta tinha rotas, controllers e modelo de banco diferentes. A decisão tomada foi manter o backend principal em `src/` e incorporar nele as ideias boas do `backend-final`.
+O backend oficial é mantido em `src/`. Versões legadas foram removidas para evitar rotas, controllers e modelos de banco concorrentes.
 
 Resultado:
 
@@ -22,14 +17,7 @@ O projeto tinha dois padrões:
 - Antigo: `id_material`, `preco_base`, `compra`, `venda`, `item_compra`, `item_venda`.
 - Novo: `id`, `preco_compra_kg`, `preco_venda_kg`, `compras`, `vendas`.
 
-O padrão escolhido foi evoluído para Prisma com nomes mais consistentes:
-
-- `users`
-- `materials`
-- `stocks`
-- `purchases`
-- `sales`
-- `audit_logs`
+O padrão oficial usa Prisma e as tabelas `usuarios`, `materiais`, `estoque`, `compras`, `vendas` e `auditoria`.
 
 No frontend, alguns campos antigos ainda são aceitos por compatibilidade, mas a API oficial já responde no padrão novo.
 
@@ -47,9 +35,9 @@ Arquivos principais:
 
 O login deixou de ser validado apenas no frontend. Agora:
 
-- Usuários ficam na tabela `users`.
-- PIN/senha fica salvo como hash em `password_hash`.
-- Login é feito por `POST /api/auth/login`.
+- Usuários ficam na tabela `usuarios`.
+- PIN/senha fica salvo como hash em `senha_hash`.
+- Login é feito por `POST /api/autenticacao/entrar`.
 - O backend retorna um JWT.
 - Rotas protegidas exigem `Authorization: Bearer <token>`.
 
@@ -59,7 +47,7 @@ Isso impede que alguém apenas altere o frontend para acessar áreas restritas.
 
 Material não é mais apagado fisicamente. Agora a exclusão vira desativação:
 
-- Campo: `materials.active`.
+- Campo: `materiais.ativo`.
 - Controller: `desativarMaterial`.
 
 Essa decisão preserva histórico de compras, vendas e auditoria.
@@ -81,4 +69,3 @@ Motivo:
 - Adicionar refresh token ou expiração visual da sessão.
 - Adicionar testes de API.
 - Criar uma tela administrativa para usuários.
-

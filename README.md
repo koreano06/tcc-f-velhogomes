@@ -73,10 +73,10 @@ No `.env`, ajuste pelo menos:
  
 - `DATABASE_URL` — string de conexão com o seu banco PostgreSQL local
 - `JWT_SECRET` — uma chave secreta própria para assinatura dos tokens
-**4. Crie as tabelas com Prisma**
+**4. Prepare o banco com Prisma**
  
 ```bash
-npm run prisma:migrate
+npm run banco:migrar
 ```
  
 **5. Crie os usuários iniciais**
@@ -92,6 +92,8 @@ npm run dev
 ```
  
 A API sobe em `http://localhost:3000/api`.
+
+O modelo oficial, as migrations e o procedimento seguro de adoção de um banco existente estão em [docs/banco-de-dados.md](docs/banco-de-dados.md).
  
 ---
  
@@ -105,21 +107,21 @@ O seed cria os usuários padrão do sistema (`gomes`, `joao` e `consulta`). Os P
  
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/login` | Autenticação de usuário |
-| GET | `/api/auth/me` | Dados do usuário autenticado |
+| GET | `/api/saude` | Verificação de disponibilidade da API |
+| POST | `/api/autenticacao/entrar` | Autenticação de usuário |
+| GET | `/api/autenticacao/perfil` | Dados do usuário autenticado |
 | GET | `/api/materiais` | Lista os materiais cadastrados |
 | POST | `/api/materiais` | Cadastra um novo material |
 | PUT | `/api/materiais/:id` | Atualiza um material existente |
 | DELETE | `/api/materiais/:id` | Remove um material |
-| GET | `/api/estoque` | Consulta o estoque atual |
-| POST | `/api/purchases` | Registra uma compra |
-| POST | `/api/sales` | Registra uma venda |
-| GET | `/api/reports/financial` | Relatório financeiro |
-| GET | `/api/reports/profit-by-material` | Relatório de lucro por material |
-| GET | `/api/management/overview` | Visão geral de gestão |
-| GET | `/api/management/finance` | Gestão financeira |
-| GET | `/api/management/partners` | Gestão de sócios/parceiros |
-| GET | `/api/management/audit` | Auditoria de ações no sistema |
+| POST | `/api/compras` | Registra uma compra |
+| POST | `/api/vendas` | Registra uma venda |
+| GET | `/api/relatorios/financeiro` | Relatório financeiro |
+| GET | `/api/relatorios/lucro-por-material` | Relatório de lucro por material |
+| GET | `/api/gestao/resumo` | Visão geral de gestão |
+| GET | `/api/gestao/financeiro` | Gestão financeira |
+| GET | `/api/gestao/parceiros` | Gestão de sócios/parceiros |
+| GET | `/api/gestao/auditoria` | Auditoria de ações no sistema |
  
 ---
  

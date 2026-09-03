@@ -56,20 +56,4 @@ async function lucroPorMaterial(req, res) {
   res.json(rows);
 }
 
-async function totalVendidoPorMaterial(req, res) {
-  const materiais = await prisma.materiais.findMany({
-    where: { ativo: true },
-    include: { itens_venda: true },
-    orderBy: { nome: "asc" },
-  });
-
-  res.json(
-    materiais.map((material) => ({
-      nome: material.nome,
-      total_peso: material.itens_venda.reduce((sum, item) => sum + toNumber(item.peso_kg), 0),
-      total_valor: material.itens_venda.reduce((sum, item) => sum + toNumber(item.subtotal), 0),
-    }))
-  );
-}
-
-module.exports = { financeiroPorPeriodo, lucroPorMaterial, totalVendidoPorMaterial };
+module.exports = { financeiroPorPeriodo, lucroPorMaterial };

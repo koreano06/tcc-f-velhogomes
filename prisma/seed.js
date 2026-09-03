@@ -47,12 +47,24 @@ async function main() {
       },
     });
   }
+
+  await prisma.fornecedores.upsert({
+    where: { documento: "NAO_INFORMADO" },
+    update: { nome: "Fornecedor nao informado", ativo: true },
+    create: { nome: "Fornecedor nao informado", documento: "NAO_INFORMADO" },
+  });
+
+  await prisma.clientes.upsert({
+    where: { documento: "CONSUMIDOR_BALCAO" },
+    update: { nome: "Consumidor de balcao", ativo: true },
+    create: { nome: "Consumidor de balcao", documento: "CONSUMIDOR_BALCAO" },
+  });
 }
 
 main()
   .then(async () => {
     await prisma.$disconnect();
-    console.log("Perfis e usuarios iniciais criados/atualizados.");
+    console.log("Perfis, usuarios e parceiros padrao criados/atualizados.");
   })
   .catch(async (error) => {
     console.error(error);

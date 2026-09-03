@@ -6,9 +6,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
+    "banco:gerar": "prisma generate",
+    "banco:migrar": "prisma migrate dev",
+    "banco:implantar": "prisma migrate deploy",
+    "banco:validar": "prisma validate",
+    "banco:interface": "prisma studio",
+    "test": "node --test",
     "seed": "node prisma/seed.js"
   },
   "keywords": [],

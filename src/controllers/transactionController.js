@@ -11,20 +11,40 @@ function validateTransactionPayload({ materialId, weightKg, pricePerKg }) {
   return null;
 }
 
-async function getOrCreateDefaultFornecedor(tx) {
-  const fornecedor = await tx.fornecedores.findFirst({ where: { ativo: true }, orderBy: { id_fornecedor: "asc" } });
-  if (fornecedor) return fornecedor;
-  return tx.fornecedores.create({ data: { nome: "Fornecedor Padrao" } });
+async function obterFornecedor(tx, fornecedorId) {
+  if (fornecedorId) {
+    const fornecedor = await tx.fornecedores.findFirst({
+      where: { id_fornecedor: Number(fornecedorId), ativo: true },
+    });
+    if (!fornecedor) throw Object.assign(new Error("Fornecedor nao encontrado ou inativo."), { status: 404 });
+    return fornecedor;
+  }
+
+  const fornecedorPadrao = await tx.fornecedores.findUnique({ where: { documento: "NAO_INFORMADO" } });
+  if (!fornecedorPadrao?.ativo) {
+    throw Object.assign(new Error("Fornecedor padrao indisponivel. Execute a carga inicial do banco."), { status: 500 });
+  }
+  return fornecedorPadrao;
 }
 
-async function getOrCreateDefaultCliente(tx) {
-  const cliente = await tx.clientes.findFirst({ where: { ativo: true }, orderBy: { id_cliente: "asc" } });
-  if (cliente) return cliente;
-  return tx.clientes.create({ data: { nome: "Consumidor Final" } });
+async function obterCliente(tx, clienteId) {
+  if (clienteId) {
+    const cliente = await tx.clientes.findFirst({
+      where: { id_cliente: Number(clienteId), ativo: true },
+    });
+    if (!cliente) throw Object.assign(new Error("Cliente nao encontrado ou inativo."), { status: 404 });
+    return cliente;
+  }
+
+  const clienteBalcao = await tx.clientes.findUnique({ where: { documento: "CONSUMIDOR_BALCAO" } });
+  if (!clienteBalcao?.ativo) {
+    throw Object.assign(new Error("Cliente de balcao indisponivel. Execute a carga inicial do banco."), { status: 500 });
+  }
+  return clienteBalcao;
 }
 
 async function registrarCompra(req, res) {
-  const { materialId, weightKg, pricePerKg } = req.body;
+  const { materialId, weightKg, pricePerKg, fornecedorId } = req.body;
   const validationError = validateTransactionPayload({ materialId, weightKg, pricePerKg });
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -37,7 +57,7 @@ async function registrarCompra(req, res) {
     const material = await tx.materiais.findFirst({ where: { id_material: idMaterial, ativo: true } });
     if (!material) throw Object.assign(new Error("Material nao encontrado ou inativo."), { status: 404 });
 
-    const fornecedor = await getOrCreateDefaultFornecedor(tx);
+    const fornecedor = await obterFornecedor(tx, fornecedorId);
     const created = await tx.compras.create({
       data: {
         id_fornecedor: fornecedor.id_fornecedor,
@@ -67,6 +87,16 @@ async function registrarCompra(req, res) {
       },
     });
 
+    await tx.auditoria.create({
+      data: {
+        tabela: "compras",
+        operacao: "INSERT",
+        id_registro: created.id_compra,
+        id_usuario: req.user.id,
+        dados_novos: { materialId: idMaterial, pesoKg: weight, precoKg: price, fornecedorId: fornecedor.id_fornecedor },
+      },
+    });
+
     return created;
   });
 
@@ -81,7 +111,7 @@ async function registrarCompra(req, res) {
 }
 
 async function registrarVenda(req, res) {
-  const { materialId, weightKg, pricePerKg } = req.body;
+  const { materialId, weightKg, pricePerKg, clienteId } = req.body;
   const validationError = validateTransactionPayload({ materialId, weightKg, pricePerKg });
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -102,7 +132,7 @@ async function registrarVenda(req, res) {
       throw Object.assign(new Error(`Saldo insuficiente. Disponivel: ${saldoAtual.toFixed(2)} kg.`), { status: 400 });
     }
 
-    const cliente = await getOrCreateDefaultCliente(tx);
+    const cliente = await obterCliente(tx, clienteId);
     const created = await tx.vendas.create({
       data: {
         id_cliente: cliente.id_cliente,
@@ -128,6 +158,16 @@ async function registrarVenda(req, res) {
         origem: "VENDA",
         id_referencia: created.id_venda,
         id_usuario: req.user.id,
+      },
+    });
+
+    await tx.auditoria.create({
+      data: {
+        tabela: "vendas",
+        operacao: "INSERT",
+        id_registro: created.id_venda,
+        id_usuario: req.user.id,
+        dados_novos: { materialId: idMaterial, pesoKg: weight, precoKg: price, clienteId: cliente.id_cliente },
       },
     });
 

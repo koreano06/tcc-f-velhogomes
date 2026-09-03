@@ -5,6 +5,45 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["ferro_velho"]
+}
+
+enum SituacaoOperacao {
+  CONCLUIDA
+  CANCELADA
+
+  @@schema("ferro_velho")
+}
+
+enum UnidadeMedida {
+  KG
+
+  @@schema("ferro_velho")
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+  AJUSTE
+
+  @@schema("ferro_velho")
+}
+
+enum OrigemMovimentacao {
+  COMPRA
+  VENDA
+  AJUSTE_MANUAL
+
+  @@schema("ferro_velho")
+}
+
+enum NivelLog {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -16,9 +55,13 @@ model auditoria {
   dados_antigos Json?
   dados_novos   Json?
   id_usuario    Int?
-  data_hora     DateTime @default(now()) @db.Timestamp(6)
+  data_hora     DateTime @default(now()) @db.Timestamptz(6)
+  usuarios      usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: SetNull, map: "fk_auditoria_usuario")
 
   @@index([tabela, id_registro], map: "idx_auditoria_tabela_reg")
+  @@index([id_usuario, data_hora], map: "idx_auditoria_usuario_data")
+  @@index([data_hora], map: "idx_auditoria_data")
+  @@schema("ferro_velho")
 }
 
 model categorias {
@@ -26,6 +69,8 @@ model categorias {
   nome         String      @unique(map: "uq_categorias_nome") @db.VarChar(80)
   descricao    String?     @db.VarChar(255)
   materiais    materiais[]
+
+  @@schema("ferro_velho")
 }
 
 model clientes {
@@ -36,10 +81,11 @@ model clientes {
   email      String?  @db.VarChar(150)
   endereco   String?  @db.VarChar(255)
   ativo      Boolean  @default(true)
-  criado_em  DateTime @default(now()) @db.Timestamp(6)
+  criado_em  DateTime @default(now()) @db.Timestamptz(6)
   vendas     vendas[]
 
   @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_clientes_nome_trgm", type: Gin)
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -47,17 +93,19 @@ model compras {
   id_compra     Int            @id @default(autoincrement())
   id_fornecedor Int
   id_usuario    Int
-  data_compra   DateTime       @default(now()) @db.Timestamp(6)
+  data_compra   DateTime       @default(now()) @db.Timestamptz(6)
   valor_total   Decimal        @default(0) @db.Decimal(12, 2)
-  status        String         @default("CONCLUIDA") @db.VarChar(20)
-  criado_em     DateTime       @default(now()) @db.Timestamp(6)
+  status        SituacaoOperacao @default(CONCLUIDA)
+  criado_em     DateTime       @default(now()) @db.Timestamptz(6)
   fornecedores  fornecedores   @relation(fields: [id_fornecedor], references: [id_fornecedor], map: "fk_compras_fornecedor")
   usuarios      usuarios       @relation(fields: [id_usuario], references: [id_usuario], map: "fk_compras_usuario")
   itens_compra  itens_compra[]
 
   @@index([data_compra], map: "idx_compras_data")
+  @@index([status, data_compra], map: "idx_compras_status_data")
   @@index([id_fornecedor], map: "idx_compras_fornecedor")
   @@index([id_usuario], map: "idx_compras_usuario")
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -65,8 +113,10 @@ model estoque {
   id_estoque    Int       @id @default(autoincrement())
   id_material   Int       @unique(map: "uq_estoque_material")
   quantidade_kg Decimal   @default(0) @db.Decimal(12, 2)
-  atualizado_em DateTime  @default(now()) @db.Timestamp(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   materiais     materiais @relation(fields: [id_material], references: [id_material], onDelete: Cascade, map: "fk_estoque_material")
+
+  @@schema("ferro_velho")
 }
 
 model fornecedores {
@@ -77,10 +127,11 @@ model fornecedores {
   email         String?   @db.VarChar(150)
   endereco      String?   @db.VarChar(255)
   ativo         Boolean   @default(true)
-  criado_em     DateTime  @default(now()) @db.Timestamp(6)
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
   compras       compras[]
 
   @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_fornecedores_nome_trgm", type: Gin)
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -96,6 +147,7 @@ model itens_compra {
 
   @@index([id_compra], map: "idx_itens_compra_compra")
   @@index([id_material], map: "idx_itens_compra_material")
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -111,17 +163,19 @@ model itens_venda {
 
   @@index([id_material], map: "idx_itens_venda_material")
   @@index([id_venda], map: "idx_itens_venda_venda")
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model logs {
   id_log    BigInt   @id @default(autoincrement())
-  nivel     String   @db.VarChar(10)
+  nivel     NivelLog
   mensagem  String
   contexto  Json?
-  criado_em DateTime @default(now()) @db.Timestamp(6)
+  criado_em DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([nivel, criado_em], map: "idx_logs_nivel_data")
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -129,12 +183,12 @@ model materiais {
   id_material           Int                     @id @default(autoincrement())
   nome                  String                  @unique(map: "uq_materiais_nome") @db.VarChar(120)
   id_categoria          Int?
-  unidade_medida        String                  @default("kg") @db.VarChar(10)
+  unidade_medida        UnidadeMedida           @default(KG)
   preco_compra_kg       Decimal                 @db.Decimal(10, 2)
   preco_venda_kg        Decimal                 @db.Decimal(10, 2)
   estoque_minimo_kg     Decimal                 @default(0) @db.Decimal(12, 2)
   ativo                 Boolean                 @default(true)
-  criado_em             DateTime                @default(now()) @db.Timestamp(6)
+  criado_em             DateTime                @default(now()) @db.Timestamptz(6)
   estoque               estoque?
   itens_compra          itens_compra[]
   itens_venda           itens_venda[]
@@ -143,32 +197,37 @@ model materiais {
 
   @@index([id_categoria], map: "idx_materiais_categoria")
   @@index([nome(ops: raw("gin_trgm_ops"))], map: "idx_materiais_nome_trgm", type: Gin)
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model movimentacoes_estoque {
   id_movimentacao   Int       @id @default(autoincrement())
   id_material       Int
-  tipo              String    @db.VarChar(10)
+  tipo              TipoMovimentacao
   quantidade_kg     Decimal   @db.Decimal(12, 2)
-  origem            String    @db.VarChar(20)
+  origem            OrigemMovimentacao
   id_referencia     Int?
   id_usuario        Int?
-  data_movimentacao DateTime  @default(now()) @db.Timestamp(6)
+  data_movimentacao DateTime  @default(now()) @db.Timestamptz(6)
   observacao        String?   @db.VarChar(255)
   materiais         materiais @relation(fields: [id_material], references: [id_material], map: "fk_mov_material")
   usuarios          usuarios? @relation(fields: [id_usuario], references: [id_usuario], map: "fk_mov_usuario")
 
   @@index([data_movimentacao], map: "idx_mov_data")
   @@index([id_material], map: "idx_mov_material")
+  @@index([id_material, data_movimentacao], map: "idx_mov_material_data")
+  @@schema("ferro_velho")
 }
 
 model perfis {
   id_perfil Int        @id @default(autoincrement())
   nome      String     @unique(map: "uq_perfis_nome") @db.VarChar(50)
   descricao String?    @db.VarChar(255)
-  criado_em DateTime   @default(now()) @db.Timestamp(6)
+  criado_em DateTime   @default(now()) @db.Timestamptz(6)
   usuarios  usuarios[]
+
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -179,14 +238,16 @@ model usuarios {
   senha_hash            String                  @db.VarChar(255)
   id_perfil             Int
   ativo                 Boolean                 @default(true)
-  criado_em             DateTime                @default(now()) @db.Timestamp(6)
-  atualizado_em         DateTime                @default(now()) @db.Timestamp(6)
+  criado_em             DateTime                @default(now()) @db.Timestamptz(6)
+  atualizado_em         DateTime                @default(now()) @updatedAt @db.Timestamptz(6)
+  auditorias            auditoria[]
   compras               compras[]
   movimentacoes_estoque movimentacoes_estoque[]
   perfis                perfis                  @relation(fields: [id_perfil], references: [id_perfil], map: "fk_usuarios_perfil")
   vendas                vendas[]
 
   @@index([id_perfil], map: "idx_usuarios_perfil")
+  @@schema("ferro_velho")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -194,15 +255,17 @@ model vendas {
   id_venda    Int           @id @default(autoincrement())
   id_cliente  Int
   id_usuario  Int
-  data_venda  DateTime      @default(now()) @db.Timestamp(6)
+  data_venda  DateTime      @default(now()) @db.Timestamptz(6)
   valor_total Decimal       @default(0) @db.Decimal(12, 2)
-  status      String        @default("CONCLUIDA") @db.VarChar(20)
-  criado_em   DateTime      @default(now()) @db.Timestamp(6)
+  status      SituacaoOperacao @default(CONCLUIDA)
+  criado_em   DateTime      @default(now()) @db.Timestamptz(6)
   itens_venda itens_venda[]
   clientes    clientes      @relation(fields: [id_cliente], references: [id_cliente], map: "fk_vendas_cliente")
   usuarios    usuarios      @relation(fields: [id_usuario], references: [id_usuario], map: "fk_vendas_usuario")
 
   @@index([id_cliente], map: "idx_vendas_cliente")
   @@index([data_venda], map: "idx_vendas_data")
+  @@index([status, data_venda], map: "idx_vendas_status_data")
   @@index([id_usuario], map: "idx_vendas_usuario")
+  @@schema("ferro_velho")
 }
